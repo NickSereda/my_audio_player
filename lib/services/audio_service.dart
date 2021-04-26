@@ -177,7 +177,6 @@ class AudioPlayerTask extends BackgroundAudioTask {
     switch (name) {
       case 'seekToTrack':
         await _player.seek(Duration.zero, index: arguments);
-        //TODO:- check if it works
         //  AudioServiceBackground.setMediaItem(_queue[arguments]);
         // AudioServiceBackground.sendCustomEvent('skip to $arguments');
         break;

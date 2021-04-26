@@ -36,6 +36,8 @@ dependencies:
   rxdart: "0.26.0"
   just_audio: "0.7.2"
   dart_tags: "0.3.1"
+  path_provider: "2.0.1"
+
 
 
 dev_dependencies:
