@@ -66,8 +66,13 @@ class _AudioPlaylistWidgetState extends State<AudioPlaylistWidget> {
 
             final MediaItem currentMediaItem = data?.item;
 
-            final int currentIndex = sequence.indexWhere(
-                    (element) => element?.id == currentMediaItem?.id) ?? 0;
+
+            int currentIndex = 0;
+
+            if (data != null && currentMediaItem != null) {
+              currentIndex = sequence
+                  .indexWhere((element) => element.id == currentMediaItem.id);
+            }
 
             return ListView(
               children: [
