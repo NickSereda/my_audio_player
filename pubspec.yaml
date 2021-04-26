@@ -35,6 +35,8 @@ dependencies:
   audio_service: "0.17.0"
   rxdart: "0.26.0"
   just_audio: "0.7.2"
+  dart_tags: "0.3.1"
+
 
 dev_dependencies:
   flutter_test:

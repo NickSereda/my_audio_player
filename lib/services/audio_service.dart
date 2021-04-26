@@ -183,10 +183,11 @@ class AudioPlayerTask extends BackgroundAudioTask {
         // AudioServiceBackground.sendCustomEvent('skip to $arguments');
         break;
 
+
+
       case 'shuffle':
         if (_isInitialAudioIndex) {
           // Saving initial audios
-
           _queue.asMap().entries.forEach((element) {
             _initialAudioPositions[element.key] = element.value;
           });
