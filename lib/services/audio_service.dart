@@ -3,7 +3,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 
-
 /// This task defines logic for playing a list of tracks.
 class AudioPlayerTask extends BackgroundAudioTask {
   AudioPlayer _player = AudioPlayer();
@@ -53,12 +52,12 @@ class AudioPlayerTask extends BackgroundAudioTask {
     _player.processingStateStream.listen((state) {
       switch (state) {
         case ProcessingState.completed:
-        // In this example, the service stops when reaching the end.
+          // In this example, the service stops when reaching the end.
           onStop();
           break;
         case ProcessingState.ready:
-        // If we just came from skipping between tracks, clear the skip
-        // state now that we're ready to play.
+          // If we just came from skipping between tracks, clear the skip
+          // state now that we're ready to play.
           _skipState = null;
           break;
         default:
@@ -72,7 +71,7 @@ class AudioPlayerTask extends BackgroundAudioTask {
       _concatenatingAudioSource = ConcatenatingAudioSource(
         // shuffleOrder: DefaultShuffleOrder(),
         children:
-        _queue.map((item) => AudioSource.uri(Uri.parse(item.id))).toList(),
+            _queue.map((item) => AudioSource.uri(Uri.parse(item.id))).toList(),
       );
 
       await _player.setAudioSource(_concatenatingAudioSource);
@@ -183,7 +182,17 @@ class AudioPlayerTask extends BackgroundAudioTask {
         // AudioServiceBackground.sendCustomEvent('skip to $arguments');
         break;
 
+      case 'loadBackgroundImage':
+        final songIndex = _player.playbackEvent.currentIndex;
 
+        final modifiedMediaItem =
+            mediaItem.copyWith(artUri: Uri.parse(arguments as String));
+
+        _queue[songIndex] = modifiedMediaItem;
+        AudioServiceBackground.setMediaItem(_queue[songIndex]);
+        AudioServiceBackground.setQueue(_queue);
+
+        break;
 
       case 'shuffle':
         if (_isInitialAudioIndex) {
@@ -193,7 +202,7 @@ class AudioPlayerTask extends BackgroundAudioTask {
           });
 
           _initialAudioIndexes =
-          List<int>.generate(_initialAudioPositions.length, (i) => i);
+              List<int>.generate(_initialAudioPositions.length, (i) => i);
 
           print("_initialAudioPositions $_initialAudioIndexes");
 
@@ -239,7 +248,6 @@ class AudioPlayerTask extends BackgroundAudioTask {
           _concatenatingAudioSource.move(currentIndex, 0);
 
           AudioServiceBackground.setQueue(_queue);
-
         } else {
           final playlistLength = _queue.length;
 
@@ -266,8 +274,8 @@ class AudioPlayerTask extends BackgroundAudioTask {
 
           // 4. Insert new(initial) audios after current index
           for (int i = audioIndexInInitialPlaylist + 1;
-          i < playlistLength;
-          i++) {
+              i < playlistLength;
+              i++) {
             _queue.add(_initialAudioPositions[i]);
           }
           _concatenatingAudioSource.move(
@@ -359,4 +367,3 @@ class AudioPlayerTask extends BackgroundAudioTask {
 // }
 
 }
-

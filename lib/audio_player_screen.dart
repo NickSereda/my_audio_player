@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_audio_player/services/audio_service.dart';
+import 'package:my_audio_player/widgets/album_cover_image.dart';
 import 'package:my_audio_player/widgets/audio_playlist_widget.dart';
 import 'package:my_audio_player/widgets/audio_timeline.dart';
 import 'package:my_audio_player/widgets/content_failure_dialog.dart';
@@ -10,6 +11,7 @@ import 'package:my_audio_player/widgets/playback_control_buttons.dart';
 import 'package:my_audio_player/widgets/title_artist_widget.dart';
 
 import 'models/bloc/audio_player_cubit.dart';
+import 'models/bloc/cover_image_bloc.dart';
 
 // NOTE: Your entrypoint MUST be a top-level function.
 void _audioPlayerTaskEntrypoint() async {
@@ -17,7 +19,6 @@ void _audioPlayerTaskEntrypoint() async {
 }
 
 class AudioPlayerScreen extends StatefulWidget {
-
   AudioPlayerScreen({
     Key key,
   }) : super(key: key);
@@ -74,13 +75,22 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: BlocProvider<AudioPlayerCubit>(
-        create: (BuildContext context) => AudioPlayerCubit(),
-        child: AudioServiceWidget(
+      body: AudioServiceWidget(
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<AudioPlayerCubit>(
+              create: (BuildContext context) => AudioPlayerCubit(),
+            ),
+            BlocProvider<CoverImageBloc>(
+              create: (BuildContext context) => CoverImageBloc(),
+            ),
+          ],
           child: BlocListener<AudioPlayerCubit, AudioPlayerState>(
             listener: (context, state) {
               if (state is AudioPlayerLoaded) {
-                _openPlaylist(state.audioTracks);
+                _openPlaylist(state.audioTracks).then((_) =>
+                    BlocProvider.of<CoverImageBloc>(context)
+                        .add(InitCoverImageEvent()));
               }
             },
             child: StreamBuilder<bool>(
@@ -113,6 +123,78 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                               size: 220,
                             ),
                           ),
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(48.0),
+                              child: Container(
+                                height: MediaQuery.of(context).size.width / 1.3,
+                                child: BlocBuilder<CoverImageBloc,
+                                        CoverImageState>(
+                                    // listener: (context, state) {
+                                    //   if (state is CoverImageLoading) {
+                                    // // Setting Background Image to null while cover of other track is loading
+                                    //       AudioService.customAction("setBackgroundImageToNull");
+                                    //   }
+                                    // },
+                                    buildWhen: (previousState, state) {
+                                  return (previousState != state);
+                                }, builder: (BuildContext context, state) {
+                                  if (state is CoverImageInitial) {
+                                    return Container();
+                                  }
+                                  if (state is CoverImageNetworkState) {
+                                    return Container();
+                                  }
+                                  if (state is CoverImageLoaded) {
+                                    return Center(
+                                      child: Container(
+                                        height:
+                                            MediaQuery.of(context).size.width /
+                                                1.3,
+                                        width:
+                                            MediaQuery.of(context).size.width /
+                                                1.3,
+                                        child: AlbumCoverImage(
+                                          image: MemoryImage(state.image),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  if (state is CoverImageLoading) {
+                                    return Center(
+                                      child: Container(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .background,
+                                          height: 100,
+                                          width: 100,
+                                          child: CircularProgressIndicator()),
+                                    );
+                                  }
+                                  if (state is CoverImageFailure) {
+                                    return Center(
+                                      child: Container(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .background,
+                                        height:
+                                            MediaQuery.of(context).size.width /
+                                                1.3,
+                                        width:
+                                            MediaQuery.of(context).size.width /
+                                                1.3,
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          size: 180,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Container();
+                                }),
+                              ),
+                            ),
+                          ),
                           AudioPlaylistWidget(
                             showPlaylistAnimationController:
                                 _playlistAnimationController,
@@ -120,23 +202,22 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                           // Error alert
                           BlocBuilder<AudioPlayerCubit, AudioPlayerState>(
                               builder: (context, state) {
-                                if (state is AudioPlayerFailure) {
-                                  return ContentFailureDialog(
-                                    title: state.title,
-                                    message: state.message,
-                                    tryAgainAction: () {
-                                      context.bloc<AudioPlayerCubit>().getAudioTracks();
-                                    },
-                                  );
-                                } else {
-                                  return Container();
-                                }
-                              }),
+                            if (state is AudioPlayerFailure) {
+                              return ContentFailureDialog(
+                                title: state.title,
+                                message: state.message,
+                                tryAgainAction: () {
+                                  context
+                                      .bloc<AudioPlayerCubit>()
+                                      .getAudioTracks();
+                                },
+                              );
+                            } else {
+                              return Container();
+                            }
+                          }),
                         ]),
                       ),
-
-
-
                       Expanded(
                         flex: 2,
                         child: Stack(
