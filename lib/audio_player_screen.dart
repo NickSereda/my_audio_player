@@ -17,11 +17,9 @@ void _audioPlayerTaskEntrypoint() async {
 }
 
 class AudioPlayerScreen extends StatefulWidget {
-  // final AudioPlayerModel audioPlayerModel;
 
   AudioPlayerScreen({
     Key key,
-    // @required this.audioPlayerModel,
   }) : super(key: key);
 
   @override
@@ -119,24 +117,25 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                             showPlaylistAnimationController:
                                 _playlistAnimationController,
                           ),
+                          // Error alert
+                          BlocBuilder<AudioPlayerCubit, AudioPlayerState>(
+                              builder: (context, state) {
+                                if (state is AudioPlayerFailure) {
+                                  return ContentFailureDialog(
+                                    title: state.title,
+                                    message: state.message,
+                                    tryAgainAction: () {
+                                      context.bloc<AudioPlayerCubit>().getAudioTracks();
+                                    },
+                                  );
+                                } else {
+                                  return Container();
+                                }
+                              }),
                         ]),
                       ),
 
-                      // Error alert
-                      BlocBuilder<AudioPlayerCubit, AudioPlayerState>(
-                          builder: (context, state) {
-                        if (state is AudioPlayerFailure) {
-                          return ContentFailureDialog(
-                            title: state.title,
-                            message: state.message,
-                            tryAgainAction: () {
-                              context.bloc<AudioPlayerCubit>().getAudioTracks();
-                            },
-                          );
-                        } else {
-                          return Container();
-                        }
-                      }),
+
 
                       Expanded(
                         flex: 2,

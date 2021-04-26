@@ -66,7 +66,6 @@ class _AudioPlaylistWidgetState extends State<AudioPlaylistWidget> {
 
             final MediaItem currentMediaItem = data?.item;
 
-
             int currentIndex = 0;
 
             if (data != null && currentMediaItem != null) {
