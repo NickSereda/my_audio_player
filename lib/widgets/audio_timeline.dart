@@ -1,36 +1,34 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:my_audio_player/models/bloc/player_cubit.dart';
 import 'package:my_audio_player/widgets/seek_bar.dart';
-import 'package:rxdart/rxdart.dart';
-import 'package:audio_service/audio_service.dart';
 
-class MediaState {
-  final MediaItem mediaItem;
-  final Duration position;
-
-  MediaState(this.mediaItem, this.position);
-}
-
+/// A timeline for audio tracks.
+///
+/// Consists of a current timestamp and a time left with a [Slider] below them.
 class AudioTimeline extends StatelessWidget {
+  const AudioTimeline({
+    Key key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final PlayerCubit activePlayerCubit =
+        context.read<PlayerCubit>();
 
-    return StreamBuilder<MediaState>(
-      stream: Rx.combineLatest2<MediaItem, Duration, MediaState>(
-          AudioService.currentMediaItemStream,
-          AudioService.positionStream,
-              (mediaItem, position) => MediaState(mediaItem, position)),
-      builder: (context, snapshot) {
-        final mediaState = snapshot.data;
-        return SeekBar(
-          duration: mediaState?.mediaItem?.duration ?? Duration.zero,
-          position: mediaState?.position ?? Duration.zero,
-          onChangeEnd: (newPosition) {
-            AudioService.seekTo(newPosition);
-          },
-        );
-      },
-    );
+    return BlocBuilder<PlayerCubit, PlayerState>(
+        buildWhen: (prevState, currState) {
+      return (currState.playerStatus ==
+          PlayerStatus.rebuildAudioTimeline);
+    }, builder: (context, state) {
+      return SeekBar(
+        duration: state.duration ?? Duration.zero,
+        position: state.position,
+        onChangeEnd: (newPosition) {
+          activePlayerCubit.seekTo(newPosition);
+        },
+      );
+    });
   }
 }
-

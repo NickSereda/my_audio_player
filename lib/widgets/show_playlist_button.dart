@@ -1,6 +1,8 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
+/// A button which opens the audio tracks playlist.
+///
+/// The button stays highlighted when the playlist is opened.
 class ShowPlaylistButton extends StatefulWidget {
   const ShowPlaylistButton({
     Key key,
@@ -8,8 +10,20 @@ class ShowPlaylistButton extends StatefulWidget {
     this.iconSize = 22.0,
   }) : super(key: key);
 
+  /// An [AnimationController] for showing the playlist list view.
   final AnimationController showPlaylistAnimationController;
 
+
+  /// The size of the icon inside the button.
+  ///
+  /// This property must not be null. It defaults to 22.0.
+  ///
+  /// The size given here is passed down to the widget in the [icon] property
+  /// via an [IconTheme]. Setting the size here instead of in, for example, the
+  /// [Icon.size] property allows the [IconButton] to size the splash area to
+  /// fit the [Icon]. If you were to set the size of the [Icon] using
+  /// [Icon.size] instead, then the [IconButton] would default to 24.0 and then
+  /// the [Icon] itself would likely get clipped.
   final double iconSize;
 
   @override
@@ -40,14 +54,7 @@ class _ShowPlaylistButtonState extends State<ShowPlaylistButton> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: AudioService.queueStream,
-      builder: (context, snapshot) {
-
-        if (snapshot.data == null) {
-          return Container();
-        }
-        return Stack(
+    return Stack(
           alignment: Alignment.center,
           children: [
             const Icon(Icons.format_list_bulleted, size: 22),
@@ -65,18 +72,14 @@ class _ShowPlaylistButtonState extends State<ShowPlaylistButton> {
                 padding: const EdgeInsets.all(3),
                 child: Container(),
               ),
-              onPressed:
-                  () {
-                widget.showPlaylistAnimationController.isCompleted
-                    ? widget.showPlaylistAnimationController.reverse()
-                    : widget.showPlaylistAnimationController.forward();
-              }
-              ,
+              onPressed: () {
+                      widget.showPlaylistAnimationController.isCompleted
+                          ? widget.showPlaylistAnimationController.reverse()
+                          : widget.showPlaylistAnimationController.forward();
+                    },
               iconSize: widget.iconSize,
             ),
           ],
         );
-      },
-    );
   }
 }

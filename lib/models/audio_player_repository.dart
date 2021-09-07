@@ -1,15 +1,12 @@
 import 'package:audio_service/audio_service.dart';
 
-class AudioPlayerRepository {
-
+class PlayerRepository {
   // Simple example from assets (Otherwise fetching tracks here from network)
   List<MediaItem> fetchAudioTracks() {
-
     List<MediaItem> audioList = [
       MediaItem(
         // This can be any unique id, but we use the audio URL for convenience.
         id: "asset:///assets/honest-feat-luna-bands.mp3",
-       // id: "asset:///assets/temperatures-rising.mp3",
         title: "HONEST",
         album: "Rojj",
       ),

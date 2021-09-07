@@ -29,14 +29,14 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
 
-  equatable: "1.2.5"
-  flutter_bloc: "6.0.6"
-  audio_session: "0.1.0"
-  audio_service: "0.17.0"
-  rxdart: "0.26.0"
-  just_audio: "0.7.2"
-  dart_tags: "0.3.1"
-  path_provider: "2.0.1"
+  equatable: ^2.0.3
+  flutter_bloc: ^7.2.0
+  bloc: ^7.1.0
+  audio_service: 0.18.0-beta.0
+  rxdart: 0.26.0
+  just_audio: 0.9.7
+  dart_tags: 0.3.1
+  path_provider: 2.0.1
 
 
 

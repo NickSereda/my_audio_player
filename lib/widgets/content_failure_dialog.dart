@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+/// Simple dialog with [title], [message] and a single "try again" button.
+///
+/// Usually displayed when some network content failed to load.
 class ContentFailureDialog extends StatelessWidget {
   final String title;
   final String message;
@@ -17,7 +20,7 @@ class ContentFailureDialog extends StatelessWidget {
       title: Text(title),
       content: message != null ? Text(message) : null,
       actions: [
-        FlatButton(
+        TextButton(
           onPressed: tryAgainAction,
           child: Text("Try again"),
         ),

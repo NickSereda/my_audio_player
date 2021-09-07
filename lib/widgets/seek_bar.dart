@@ -7,12 +7,13 @@ class SeekBar extends StatefulWidget {
   final ValueChanged<Duration> onChanged;
   final ValueChanged<Duration> onChangeEnd;
 
-  SeekBar({
+  const SeekBar({
+    Key key,
     @required this.duration,
     @required this.position,
     this.onChanged,
     this.onChangeEnd,
-  });
+  }) : super(key: key);
 
   @override
   _SeekBarState createState() => _SeekBarState();
@@ -32,7 +33,7 @@ class _SeekBarState extends State<SeekBar> {
     return Stack(
       children: [
         Slider(
-          min: 0.0,
+          // min: 0.0,
           max: widget.duration.inMilliseconds.toDouble(),
           value: value,
           onChanged: (value) {

@@ -1,22 +1,19 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:my_audio_player/services/audio_service.dart';
-import 'package:my_audio_player/widgets/album_cover_image.dart';
+import 'package:my_audio_player/models/audio_player_repository.dart';
 import 'package:my_audio_player/widgets/audio_playlist_widget.dart';
 import 'package:my_audio_player/widgets/audio_timeline.dart';
 import 'package:my_audio_player/widgets/content_failure_dialog.dart';
+import 'package:my_audio_player/widgets/cover_image.dart';
+import 'package:my_audio_player/widgets/error_message_snack_bar.dart';
 import 'package:my_audio_player/widgets/playback_control_buttons.dart';
+import 'package:my_audio_player/widgets/playback_speed_button.dart';
+import 'package:my_audio_player/widgets/sleep_timer_button.dart';
 import 'package:my_audio_player/widgets/title_artist_widget.dart';
 
-import 'models/bloc/audio_player_cubit.dart';
-import 'models/bloc/cover_image_bloc.dart';
-
-// NOTE: Your entrypoint MUST be a top-level function.
-void _audioPlayerTaskEntrypoint() async {
-  AudioServiceBackground.run(() => AudioPlayerTask());
-}
+import 'models/bloc/player_cubit.dart';
+import 'models/bloc/tracks_cubit.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   AudioPlayerScreen({
@@ -41,209 +38,112 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     );
   }
 
-  _openPlaylist(List<MediaItem> audioTracks) async {
-    List<dynamic> list = [];
-    for (int i = 0; i < audioTracks.length; i++) {
-      var m = audioTracks[i].toJson();
-      list.add(m);
-    }
-
-    var params = {"data": list};
-
-    AudioService.connect();
-
-    await AudioService.start(
-        backgroundTaskEntrypoint: _audioPlayerTaskEntrypoint,
-        androidNotificationChannelName: 'Audio Service Demo',
-        // Enable this if you want the Android service to exit the foreground state on pause.
-        //androidStopForegroundOnPause: true,
-        androidNotificationColor: 0xFF2196f3,
-        androidNotificationIcon: 'mipmap/ic_launcher',
-        androidEnableQueue: true,
-        params: params);
-  }
-
   @override
   void dispose() {
-    AudioService.stop();
     super.dispose();
     _playlistAnimationController.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: AudioServiceWidget(
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider<AudioPlayerCubit>(
-              create: (BuildContext context) => AudioPlayerCubit(),
-            ),
-            // BlocProvider<CoverImageBloc>(
-            //   create: (BuildContext context) => CoverImageBloc(),
-            // ),
-          ],
-          child: BlocListener<AudioPlayerCubit, AudioPlayerState>(
-            listener: (context, state) {
-              if (state is AudioPlayerLoaded) {
-                _openPlaylist(state.audioTracks);
-                // _openPlaylist(state.audioTracks).then((_) =>
-                //     BlocProvider.of<CoverImageBloc>(context)
-                //         .add(InitCoverImageEvent()));
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<PlayerCubit>(
+            create: (BuildContext context) => PlayerCubit()),
+        BlocProvider<TracksCubit>(
+            create: (BuildContext context) => TracksCubit(PlayerRepository())),
+      ],
+      child: BlocBuilder<TracksCubit, TracksState>(
+        builder: (context, state) {
+          if (state is TracksLoading) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (state is TracksLoaded) {
+            return BlocConsumer<PlayerCubit, PlayerState>(
+                listener: (prevState, currState) {
+              if (currState.playerStatus == PlayerStatus.error) {
+                getErrorMessageSnackBar(context);
               }
-            },
-            child: StreamBuilder<bool>(
-                stream: AudioService.runningStream,
-                builder: (context, snapshot) {
-                  // getting tracks
-                  context.bloc<AudioPlayerCubit>().getAudioTracks();
+            }, buildWhen: (prevState, currState) {
+              return (currState.playerStatus ==
+                  PlayerStatus.rebuildAudioPlayerWidget);
+            }, builder: (context, activePlayerState) {
+              final theme = Theme.of(context);
 
-                  if (snapshot.connectionState != ConnectionState.active) {
-                    // Don't show anything until we've ascertained whether or not the
-                    // service is running, since we want to show a different UI in
-                    // each case.
-                    return SizedBox(
-                        child: Center(
-                      child: CircularProgressIndicator(),
-                    ));
-                  }
-
-                  return Column(
-                    children: [
-                      // Image
-                      Expanded(
-                        flex: 3,
-                        child: Stack(children: [
-                          Center(
-                            child: Icon(
-                              Icons.music_note,
-                              color: theme.colorScheme.onBackground
-                                  .withOpacity(0.54),
-                              size: 220,
-                            ),
+              return Column(
+                children: [
+                  // Image
+                  Flexible(
+                    child: Stack(
+                      children: [
+                        Center(
+                          child: Icon(
+                            Icons.music_note,
+                            color: theme.colorScheme.onBackground
+                                .withOpacity(0.54),
+                            size: 100,
                           ),
-                          // Center(
-                          //   child: Padding(
-                          //     padding: const EdgeInsets.all(48.0),
-                          //     child: Container(
-                          //       height: MediaQuery.of(context).size.width / 1.3,
-                          //       child: BlocBuilder<CoverImageBloc,
-                          //               CoverImageState>(
-                          //           // listener: (context, state) {
-                          //           //   if (state is CoverImageLoading) {
-                          //           // // Setting Background Image to null while cover of other track is loading
-                          //           //       AudioService.customAction("setBackgroundImageToNull");
-                          //           //   }
-                          //           // },
-                          //           buildWhen: (previousState, state) {
-                          //         return (previousState != state);
-                          //       }, builder: (BuildContext context, state) {
-                          //         if (state is CoverImageInitial) {
-                          //           return Container();
-                          //         }
-                          //         if (state is CoverImageNetworkState) {
-                          //           return Container();
-                          //         }
-                          //         if (state is CoverImageLoaded) {
-                          //           return Center(
-                          //             child: Container(
-                          //               height:
-                          //                   MediaQuery.of(context).size.width /
-                          //                       1.3,
-                          //               width:
-                          //                   MediaQuery.of(context).size.width /
-                          //                       1.3,
-                          //               child: AlbumCoverImage(
-                          //                 image: MemoryImage(state.image),
-                          //               ),
-                          //             ),
-                          //           );
-                          //         }
-                          //         if (state is CoverImageLoading) {
-                          //           return Center(
-                          //             child: Container(
-                          //                 color: Theme.of(context)
-                          //                     .colorScheme
-                          //                     .background,
-                          //                 height: 100,
-                          //                 width: 100,
-                          //                 child: CircularProgressIndicator()),
-                          //           );
-                          //         }
-                          //         if (state is CoverImageFailure) {
-                          //           return Center(
-                          //             child: Container(
-                          //               color: Theme.of(context)
-                          //                   .colorScheme
-                          //                   .background,
-                          //               height:
-                          //                   MediaQuery.of(context).size.width /
-                          //                       1.3,
-                          //               width:
-                          //                   MediaQuery.of(context).size.width /
-                          //                       1.3,
-                          //               child: Icon(
-                          //                 Icons.broken_image,
-                          //                 size: 180,
-                          //               ),
-                          //             ),
-                          //           );
-                          //         }
-                          //         return Container();
-                          //       }),
-                          //     ),
-                          //   ),
-                          // ),
-                          AudioPlaylistWidget(
-                            showPlaylistAnimationController:
-                                _playlistAnimationController,
-                          ),
-                          // Error alert
-                          BlocBuilder<AudioPlayerCubit, AudioPlayerState>(
-                              builder: (context, state) {
-                            if (state is AudioPlayerFailure) {
-                              return ContentFailureDialog(
-                                title: state.title,
-                                message: state.message,
-                                tryAgainAction: () {
-                                  context
-                                      .bloc<AudioPlayerCubit>()
-                                      .getAudioTracks();
-                                },
-                              );
-                            } else {
-                              return Container();
-                            }
-                          }),
-                        ]),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Stack(
-                          children: [
-                            Column(
-                              children: [
-                                SizedBox(height: 16),
-                                TitleArtistWidget(),
-                                SizedBox(height: 24),
-                                AudioTimeline(),
-                                SizedBox(height: 20),
-                                PlaybackControlButtons(
-                                  showPlaylistAnimationController:
-                                      _playlistAnimationController,
-                                ),
-                              ],
-                            ),
-                          ],
                         ),
-                      ),
-                    ],
-                  );
-                }),
-          ),
-        ),
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(48.0),
+                            child: Container(
+                              height: MediaQuery.of(context).size.width / 1.3,
+                              child: CoverImage(),
+                            ),
+                          ),
+                        ),
+                        AudioPlaylistWidget(
+                          queue: activePlayerState.queue,
+                          currentIndex: activePlayerState.currentIndex,
+                          showPlaylistAnimationController:
+                              _playlistAnimationController,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  TitleArtistWidget(),
+                  SizedBox(height: 24),
+
+                  AudioTimeline(),
+                  SizedBox(height: 20),
+
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                    child: PlaybackControlButtons(
+                      showPlaylistAnimationController:
+                          _playlistAnimationController,
+                    ),
+                  ),
+                  SizedBox(height: 25.0),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        PlaybackSpeedButton(),
+                        SleepTimerButton(),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            });
+          }
+
+          if (state is TracksFailure) {
+            return Center(
+              child: ContentFailureDialog(
+                  title: state.title,
+                  tryAgainAction: () =>
+                      context.read<TracksCubit>().getAudioTracks()),
+            );
+          }
+
+          return Container();
+        },
       ),
     );
   }

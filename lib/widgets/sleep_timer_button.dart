@@ -1,57 +1,49 @@
 import 'dart:async';
-
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:my_audio_player/models/bloc/player_cubit.dart';
 
+/// A sleep timer button for audio player.
+///
+/// When pressed, shows a Cupertino style timer picker.
+///
+/// When active, shows timer countdown.
+///
+/// Uses pausePlayer method in [PlayerCubit] to pause currently playing audio.
 class SleepTimerButton extends StatefulWidget {
+  /// Creates a sleep timer button for audio player.
+  ///
+  /// When pressed, shows a Cupertino style timer picker.
+  ///
+  /// When active, shows timer countdown.
+  ///
+  /// Uses pausePlayer method in [PlayerCubit] to pause currently playing audio.
+  const SleepTimerButton({Key key}) : super(key: key);
 
   @override
   _SleepTimerButtonState createState() => _SleepTimerButtonState();
 }
 
 class _SleepTimerButtonState extends State<SleepTimerButton> {
-  Timer _timer;
+  Timer _timer = Timer(Duration.zero, () {})
+    ..cancel(); // TODO: maybe there should be one global timer? to avoid memory leak
 
-  bool _isTimerRunning = false;
-
-  int _durationInHours = 0;
-  int _durationInMinutes = 0;
-  int _durationInSeconds = 0;
-
-  Duration _duration;
+  Duration _duration = const Duration();
 
   Future<void> startTimer() async {
-    int totalSeconds = _duration.inSeconds;
     const oneSec = Duration(seconds: 1);
-
-    setState(() {
-      _durationInHours = (totalSeconds / (60 * 60)).truncate();
-
-      _durationInMinutes = (totalSeconds / 60).truncate().remainder(60);
-
-      _durationInSeconds = totalSeconds.remainder(60);
-    });
-
-    setState(() {
-      _isTimerRunning = true;
-    });
+    setState(() {});
     _timer = Timer.periodic(oneSec, (timer) {
-      if (totalSeconds == 0) {
-        // print("DONE");
+      if (_duration.inMicroseconds == 0) {
         timer.cancel();
-        AudioService.pause();
-        setState(() {
-          _isTimerRunning = false;
-        });
+        context.read<PlayerCubit>().pausePlayer();
+        // AudioService.pause();
+        setState(() {});
       } else {
-        totalSeconds--;
         setState(() {
-          _durationInHours = (totalSeconds / (60 * 60)).truncate();
-          _durationInMinutes = (totalSeconds / 60).truncate().remainder(60);
-          _durationInSeconds = totalSeconds.remainder(60);
+          _duration = _duration - oneSec;
         });
-        // print("$totalSeconds");
       }
     });
   }
@@ -100,34 +92,40 @@ class _SleepTimerButtonState extends State<SleepTimerButton> {
 
   @override
   Widget build(BuildContext context) {
-    final hoursRemainingString = _durationInHours > 0
-        ? "$_durationInHours hours : "
+    final hoursRemainingString = _duration.inHours > 0
+        ? "${_duration.inHours} hours : "
         : ""; // don't show hours when there's less than 1 hour left
     final String timerRemaining =
-        "$hoursRemainingString$_durationInMinutes min : $_durationInSeconds sec";
+        "$hoursRemainingString${_duration.inMinutes} min : ${_duration.inSeconds} sec";
 
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(3),
+    return BlocBuilder<PlayerCubit, PlayerState>(
+        buildWhen: (prevState, currState) {
+      return (currState.playerStatus ==
+          PlayerStatus.rebuildSleepTimerButton);
+    }, builder: (context, state) {
+      return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(3),
+          ),
+          side: BorderSide(
+            width: 0.3,
+            color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
+          ),
         ),
-        side: BorderSide(
-          width: 0.3,
-          color: Theme.of(context).colorScheme.onBackground.withOpacity(0.5),
-        ),
-      ),
-      onPressed: _isTimerRunning
-          ? () {
-        _timer.cancel();
-        setState(() {
-          _isTimerRunning = false;
-        });
-      }
-          : _selectTime,
-      icon: _isTimerRunning
-          ? const Icon(Icons.cancel)
-          : const Icon(Icons.nightlight_round),
-      label: _isTimerRunning ? Text(timerRemaining) : const Text("Sleep timer"),
-    );
+        onPressed: _timer.isActive
+            ? () {
+                setState(() {
+                  _timer.cancel();
+                });
+              }
+            : _selectTime,
+        icon: _timer.isActive
+            ? const Icon(Icons.cancel)
+            : const Icon(Icons.nightlight_round),
+        label:
+            _timer.isActive ? Text(timerRemaining) : const Text("Sleep timer"),
+      );
+    });
   }
 }
