@@ -1,44 +1,48 @@
 import 'dart:async';
 import 'package:audio_service/audio_service.dart';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:my_audio_player/models/bloc/player_cubit.dart';
+import 'package:rxdart/rxdart.dart';
 
-/// This task defines logic for playing a list of tracks.
-class RegularAudioHandler extends BaseAudioHandler {
+class BackgroundAudioTaskHandler extends BaseAudioHandler
+    with WidgetsBindingObserver {
   final AudioPlayer _player = AudioPlayer();
 
   final List<MediaItem> tracksQueue;
 
-  final PlayerCubit playerCubit;
-
-  RegularAudioHandler({
-    @required this.tracksQueue,
-    @required this.playerCubit,
+  BackgroundAudioTaskHandler({
+    required this.tracksQueue,
   }) {
     _init();
   }
 
-  StreamSubscription<Duration> _durationStreamSubscription;
-  StreamSubscription<int> _currentIndexStreamSubscription;
-  StreamSubscription<SequenceState> _sequenceStateStreamSubscription;
-  StreamSubscription _errorStreamSubscription;
+  StreamSubscription<int?>? _currentIndexStreamSubscription;
+  StreamSubscription<SequenceState?>? _sequenceStateStreamSubscription;
+  StreamSubscription<PlaybackEvent>? _playbackEventStreamSubscription;
+  StreamSubscription? _errorStreamSubscription;
+
+  BehaviorSubject<Duration?> get durationStream =>
+      _player.durationStream as BehaviorSubject<Duration?>;
+
+  BehaviorSubject<Duration> get positionStream =>
+      _player.positionStream as BehaviorSubject<Duration>;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.detached) {
+      stop().then((value) => customAction('dispose'));
+    }
+  }
 
   Future<void> _init() async {
     queue.add(tracksQueue);
-
     await _loadPlaylist();
-
     _notifyAudioHandlerAboutPlaybackEvents();
-    _listenForDurationChanges();
     await _listenForCurrentSongIndexChanges();
     _listenForSequenceStateChanges();
-    _listenForError();
-
-    playerCubit.getPlayerStreamSubscription();
+    WidgetsBinding.instance!.addObserver(this);
   }
 
   ConcatenatingAudioSource _playlist = ConcatenatingAudioSource(children: []);
@@ -48,118 +52,111 @@ class RegularAudioHandler extends BaseAudioHandler {
       final List<AudioSource> list = [];
 
       if (defaultTargetPlatform == TargetPlatform.android) {
-        for (int i = 0; i < queue.valueWrapper.value.length; i++) {
-          final name = queue.valueWrapper.value[i].id;
+        for (int i = 0; i < queue.value.length; i++) {
+          final name = queue.value[i].id;
           if (name.startsWith('asset')) {
             AudioSource audio = AudioSource.uri(Uri.parse(name),
-                tag: queue.valueWrapper.value[i]);
+                tag: queue.value[i]);
             list.add(audio);
           } else {
             AudioSource audio = LockCachingAudioSource(Uri.parse(name),
-                tag: queue.valueWrapper.value[i]);
+                tag: queue.value[i]);
             list.add(audio);
           }
         }
       } else {
-        for (int i = 0; i < queue.valueWrapper.value.length; i++) {
-          final name = queue.valueWrapper.value[i].id;
+        for (int i = 0; i < queue.value.length; i++) {
+          final name = queue.value[i].id;
           AudioSource audio = AudioSource.uri(Uri.parse(name),
-              tag: queue.valueWrapper.value[i]);
+              tag: queue.value[i]);
           list.add(audio);
         }
       }
 
       _playlist = ConcatenatingAudioSource(children: list);
 
-      await _player.setAudioSource(_playlist);
+      await _player
+          .setAudioSource(_playlist)
+          .onError((dynamic error, stackTrace) async {
+        for (int i = 0; i < _playlist.children.length; i++) {
+          bool hasError = true;
+
+          await _player
+              .setAudioSource(_playlist, initialIndex: i)
+              .then((_) => hasError = false)
+              .onError((dynamic error, stackTrace) => hasError = true);
+
+          // i > 4 ensures there are no memory pressure
+          if (hasError == false || i > 4) {
+            break;
+          }
+        }
+        return;
+      });
     } catch (e) {
-      playerCubit.emit(
-          playerCubit.state.copyWith(activePlayerStatus: PlayerStatus.error));
+
     }
   }
 
   void _notifyAudioHandlerAboutPlaybackEvents() {
-    _player.playbackEventStream.listen((PlaybackEvent event) {
-      final playing = _player.playing;
-      playbackState.add(playbackState.valueWrapper.value.copyWith(
-        controls: [
-          MediaControl.skipToPrevious,
-          if (playing) MediaControl.pause else MediaControl.play,
-          MediaControl.stop,
-          MediaControl.skipToNext,
-        ],
-        systemActions: const {
-          MediaAction.seek,
-        },
-        androidCompactActionIndices: const [0, 1, 3],
-        processingState: const {
-          ProcessingState.idle: AudioProcessingState.idle,
-          ProcessingState.loading: AudioProcessingState.loading,
-          ProcessingState.buffering: AudioProcessingState.buffering,
-          ProcessingState.ready: AudioProcessingState.ready,
-          ProcessingState.completed: AudioProcessingState.completed,
-        }[_player.processingState],
-        repeatMode: const {
-          LoopMode.off: AudioServiceRepeatMode.none,
-          LoopMode.one: AudioServiceRepeatMode.one,
-          LoopMode.all: AudioServiceRepeatMode.all,
-        }[_player.loopMode],
-        shuffleMode: (_player.shuffleModeEnabled)
-            ? AudioServiceShuffleMode.all
-            : AudioServiceShuffleMode.none,
-        playing: playing,
-        updatePosition: _player.position,
-        bufferedPosition: _player.bufferedPosition,
-        speed: _player.speed,
-        queueIndex: event.currentIndex,
-      ));
-    });
-  }
-
-  void _listenForDurationChanges() {
-    _durationStreamSubscription =
-        _player.durationStream.listen((duration) async {
-      int index = _player.playbackEvent.currentIndex;
-
-      //int index = _player.durationStream.last;
-      final newQueue = queue.valueWrapper.value;
-      if (index == null || newQueue.isEmpty) return;
-      if (_player.shuffleModeEnabled) {
-        index = _player.shuffleIndices[index];
-      }
-
-      // final oldMediaItem = newQueue[index];
-      // final newMediaItem = oldMediaItem.copyWith(duration: duration);
-
-      playerCubit.changeDuration(duration);
-
-      // newQueue[index] = newMediaItem;
-      //
-      // queue.add(newQueue);
-      // mediaItem.add(newMediaItem);
-    });
+    _playbackEventStreamSubscription =
+        _player.playbackEventStream.listen((PlaybackEvent event) {
+          final playing = _player.playing;
+          playbackState.add(playbackState.value.copyWith(
+            controls: [
+              MediaControl.skipToPrevious,
+              if (playing) MediaControl.pause else MediaControl.play,
+              MediaControl.stop,
+              MediaControl.skipToNext,
+            ],
+            systemActions: const {
+              MediaAction.seek,
+            },
+            androidCompactActionIndices: const [0, 1, 3],
+            processingState: const {
+              ProcessingState.idle: AudioProcessingState.idle,
+              ProcessingState.loading: AudioProcessingState.loading,
+              ProcessingState.buffering: AudioProcessingState.buffering,
+              ProcessingState.ready: AudioProcessingState.ready,
+              ProcessingState.completed: AudioProcessingState.completed,
+            }[_player.processingState]!,
+            repeatMode: const {
+              LoopMode.off: AudioServiceRepeatMode.none,
+              LoopMode.one: AudioServiceRepeatMode.one,
+              LoopMode.all: AudioServiceRepeatMode.all,
+            }[_player.loopMode]!,
+            shuffleMode: (_player.shuffleModeEnabled)
+                ? AudioServiceShuffleMode.all
+                : AudioServiceShuffleMode.none,
+            playing: playing,
+            updatePosition: _player.position,
+            bufferedPosition: _player.bufferedPosition,
+            speed: _player.speed,
+            queueIndex: event.currentIndex!,
+          ));
+        });
   }
 
   Future<void> _listenForCurrentSongIndexChanges() async {
     _currentIndexStreamSubscription =
         _player.currentIndexStream.listen((index) async {
-      final playlist = queue;
-      if (index == null || await playlist.isEmpty) return;
-      if (_player.shuffleModeEnabled) {
-        index = _player.shuffleIndices[index];
-      }
-      mediaItem.add(playlist.valueWrapper.value[index]);
-    });
+          final playlist = queue;
+          if (index == null || await playlist.isEmpty) return;
+          if (_player.shuffleModeEnabled) {
+            index = _player.shuffleIndices![index];
+          }
+          mediaItem.add(playlist.value[index]);
+        });
   }
 
   void _listenForSequenceStateChanges() {
     _sequenceStateStreamSubscription =
-        _player.sequenceStateStream.listen((SequenceState sequenceState) {
-      final sequence = sequenceState?.effectiveSequence;
-      if (sequence == null || sequence.isEmpty) return;
-      final items = sequence.map((source) => source.tag as MediaItem);
-      queue.add(items.toList());
-    });
+        _player.sequenceStateStream.listen((SequenceState? sequenceState) {
+          final sequence = sequenceState?.effectiveSequence;
+          if (sequence == null || sequence.isEmpty) return;
+          final List<MediaItem> items = sequence.map((source) => source.tag).toList() as List<MediaItem>;
+          queue.add(items);
+        });
   }
 
   @override
@@ -169,7 +166,7 @@ class RegularAudioHandler extends BaseAudioHandler {
     _playlist.addAll(audioSource.toList());
 
     // notify system
-    final newQueue = queue.valueWrapper.value..addAll(mediaItems);
+    final newQueue = queue.value..addAll(mediaItems);
     queue.add(newQueue);
   }
 
@@ -180,7 +177,7 @@ class RegularAudioHandler extends BaseAudioHandler {
     await _playlist.add(audioSource);
 
     // notify system
-    final newQueue = queue.valueWrapper.value..add(mediaItem);
+    final newQueue = queue.value..add(mediaItem);
     queue.add(newQueue);
   }
 
@@ -197,7 +194,7 @@ class RegularAudioHandler extends BaseAudioHandler {
     _playlist.removeAt(index);
 
     // notify system
-    final newQueue = queue.valueWrapper.value..removeAt(index);
+    final newQueue = queue.value..removeAt(index);
     queue.add(newQueue);
   }
 
@@ -212,9 +209,9 @@ class RegularAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> skipToQueueItem(int index) async {
-    if (index < 0 || index >= queue.valueWrapper.value.length) return;
+    if (index < 0 || index >= queue.value.length) return;
     if (_player.shuffleModeEnabled) {
-      index = _player.shuffleIndices[index];
+      index = _player.shuffleIndices![index];
     }
     _player.seek(Duration.zero, index: index);
   }
@@ -249,8 +246,8 @@ class RegularAudioHandler extends BaseAudioHandler {
     var newPosition = _player.position + offset;
     // Make sure we don't jump out of bounds.
     if (newPosition < Duration.zero) newPosition = Duration.zero;
-    if (newPosition > playerCubit.state.duration)
-      newPosition = playerCubit.state.duration;
+    if (newPosition > _player.duration!)
+      newPosition = _player.duration!;
     // Perform the jump via a seek.
     await _player.seek(newPosition);
   }
@@ -282,34 +279,37 @@ class RegularAudioHandler extends BaseAudioHandler {
   }
 
   @override
-  Future customAction(String name, [Map<String, dynamic> extras]) async {
+  Future customAction(String name, [Map<String, dynamic>? extras]) async {
     if (name == 'dispose') {
       await _player.dispose();
-      _durationStreamSubscription?.cancel();
       _currentIndexStreamSubscription?.cancel();
       _sequenceStateStreamSubscription?.cancel();
       _errorStreamSubscription?.cancel();
+      _playbackEventStreamSubscription?.cancel();
+
+      WidgetsBinding.instance!.removeObserver(this);
+
       super.stop();
     }
 
     if (name == "loadBackgroundImage") {
-      int index = _player.playbackEvent.currentIndex;
+      int? index = _player.playbackEvent.currentIndex;
 
       //int index = _player.durationStream.last;
-      final newQueue = queue.valueWrapper.value;
+      final List<MediaItem?> newQueue = queue.value;
       if (index == null || newQueue.isEmpty) return;
       if (_player.shuffleModeEnabled) {
-        index = _player.shuffleIndices[index];
+        index = _player.shuffleIndices![index];
       }
-
-      final oldMediaItem = newQueue[index];
-      final newMediaItem =
-          oldMediaItem.copyWith(artUri: Uri.parse(extras["path"] as String));
+      final oldMediaItem = newQueue[index]!;
+      final MediaItem? newMediaItem =
+      oldMediaItem.copyWith(artUri: Uri.parse(extras!["path"] as String));
 
       newQueue[index] = newMediaItem;
-      queue.add(newQueue);
+      queue.add(newQueue as List<MediaItem>);
       mediaItem.add(newMediaItem);
     }
+
   }
 
   @override
@@ -318,40 +318,4 @@ class RegularAudioHandler extends BaseAudioHandler {
     return super.stop();
   }
 
-  bool _handleErrorComplete = true;
-
-  void _listenForError() {
-    _errorStreamSubscription = _player.playbackEventStream.listen((event) {},
-        // Deleting problem track.
-        // Doesn't work on web, instead we handle web errors in onPlay and onSkipToQueueItem.
-        // AudioPlayer.playbackEventStream fires multiple error events per audio track.
-        onError: (Object error, StackTrace stackTrace) async {
-      if (_handleErrorComplete == true) {
-        _handleErrorComplete = false;
-        await handleError(error);
-      }
-    });
-  }
-
-  Future<void> handleError(Object error) async {
-    if (error is PlatformException) {
-      int problemSongIndex = _player.playbackEvent.currentIndex;
-
-      if (!kIsWeb) {
-        await _playlist.removeAt(problemSongIndex);
-
-        final newQueue = queue.valueWrapper.value..removeAt(problemSongIndex);
-        queue.add(newQueue);
-      }
-
-      playerCubit.emit(
-          playerCubit.state.copyWith(activePlayerStatus: PlayerStatus.error));
-
-      pause();
-
-      skipToQueueItem(0);
-
-      _handleErrorComplete = true;
-    }
-  }
 }

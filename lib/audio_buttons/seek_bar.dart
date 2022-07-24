@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 class SeekBar extends StatefulWidget {
   final Duration duration;
   final Duration position;
-  final ValueChanged<Duration> onChanged;
-  final ValueChanged<Duration> onChangeEnd;
+  final ValueChanged<Duration>? onChanged;
+  final ValueChanged<Duration>? onChangeEnd;
 
   const SeekBar({
-    Key key,
-    @required this.duration,
-    @required this.position,
+    Key? key,
+    required this.duration,
+    required this.position,
     this.onChanged,
     this.onChangeEnd,
   }) : super(key: key);
@@ -20,7 +20,7 @@ class SeekBar extends StatefulWidget {
 }
 
 class _SeekBarState extends State<SeekBar> {
-  double _dragValue;
+  double? _dragValue;
   bool _dragging = false;
 
   @override
@@ -44,12 +44,12 @@ class _SeekBarState extends State<SeekBar> {
               _dragValue = value;
             });
             if (widget.onChanged != null) {
-              widget.onChanged(Duration(milliseconds: value.round()));
+              widget.onChanged!(Duration(milliseconds: value.round()));
             }
           },
           onChangeEnd: (value) {
             if (widget.onChangeEnd != null) {
-              widget.onChangeEnd(Duration(milliseconds: value.round()));
+              widget.onChangeEnd!(Duration(milliseconds: value.round()));
             }
             _dragging = false;
           },
@@ -58,26 +58,35 @@ class _SeekBarState extends State<SeekBar> {
           right: 16.0,
           bottom: 0.0,
           child: Text(
-              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-                  .firstMatch("$_remaining")
-                  ?.group(1) ??
-                  '$_remaining',
+              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})')
+                      .firstMatch("$_remaining")
+                      ?.group(1) ??
+                  _trimDuration(_remaining),
               style: Theme.of(context).textTheme.caption),
         ),
         Positioned(
           left: 16.0,
           bottom: 0.0,
           child: Text(
-              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})\.\d+$')
-                  .firstMatch("$_passed")
-                  ?.group(1) ??
-                  '$_passed',
+              RegExp(r'((^0*[1-9]\d*:)?\d{2}:\d{2})')
+                      .firstMatch("$_passed")
+                      ?.group(1) ??
+                  _trimDuration(_passed),
               style: Theme.of(context).textTheme.caption),
         ),
       ],
     );
   }
 
+  String _trimDuration(Duration duration) {
+    final String durationString = duration.toString();
+    final String trimmedDurationString =
+        durationString.substring(0, durationString.indexOf("."));
+    return trimmedDurationString;
+  }
+
   Duration get _remaining => widget.duration - widget.position;
-  Duration get _passed =>  widget.position;
+
+
+  Duration get _passed => widget.position;
 }

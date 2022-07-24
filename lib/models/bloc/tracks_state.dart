@@ -1,37 +1,26 @@
 part of 'tracks_cubit.dart';
 
-@immutable
-abstract class TracksState extends Equatable {
-  const TracksState();
+enum TracksStatus { initial, loading, loaded, error, tracksEmpty }
 
-  @override
-  List<Object> get props => [];
-}
-
-class TracksInitial extends TracksState {
-  const TracksInitial();
-}
-
-class TracksLoading extends TracksState {
-  const TracksLoading();
-}
-
-class TracksLoaded extends TracksState {
+class TracksState extends Equatable {
   final List<MediaItem> audioTracks;
+  final TracksStatus tracksStatus;
 
-  const TracksLoaded(this.audioTracks);
-
-  @override
-  List<Object> get props => [audioTracks];
-}
-
-
-class TracksFailure extends TracksState {
-  final String title;
-  final String message;
-
-  const TracksFailure({@required this.title, @required this.message});
+  TracksState({
+    required this.tracksStatus,
+    required this.audioTracks,
+  });
 
   @override
-  List<Object> get props => [title, message];
+  List<Object> get props => [tracksStatus, audioTracks];
+
+  TracksState copyWith({
+    TracksStatus? tracksStatus,
+    List<MediaItem>? audioTracks,
+  }) {
+    return TracksState(
+      tracksStatus: tracksStatus ?? this.tracksStatus,
+      audioTracks: audioTracks ?? this.audioTracks,
+    );
+  }
 }

@@ -7,7 +7,7 @@ SnackBar getErrorMessageSnackBar(BuildContext context) {
       'An error has occurred while loading audio',
       style: Theme.of(context)
           .textTheme
-          .subtitle1
+          .subtitle1!
           .copyWith(color: Theme.of(context).colorScheme.onError),
     ),
     duration: const Duration(seconds: 2),

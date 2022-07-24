@@ -1,46 +1,20 @@
 part of 'player_cubit.dart';
 
-/// Current status of [PlayerCubit].
 enum PlayerStatus {
-
   initial,
   error,
-
-  // Cover image statuses
   imageLoading,
   imageError,
   imageChanged,
-
-  // Rebuild statuses
-  rebuildAudioPlayerWidget,
-  rebuildPlayPauseButton,
-  rebuildAudioTimeline,
-  rebuildPlaybackSpeedButton,
-  rebuildLoopButton,
-  rebuildNextTrackButton,
-  rebuildPreviousTrackButton,
-  rebuildTitleArtistWidget,
-  rebuildSleepTimerButton,
-  rebuildPlaybackControlButtons,
-
 }
 
-/// Current status of [queue].
-enum TracksStatus {
-  initial,
-  tracksLoading,
-  tracksLoaded,
-  tracksEmpty,
-  tracksError,
-}
+class AudioPlayerState extends Equatable {
 
-
-
-class PlayerState extends Equatable {
+  final LoopMode loopMode;
 
   final List<MediaItem> queue;
 
-  final MediaItem currentMediaItem;
+  final MediaItem? currentMediaItem;
 
   final int currentIndex;
 
@@ -48,63 +22,76 @@ class PlayerState extends Equatable {
 
   final PlayerStatus playerStatus;
 
-  final PlaybackState playbackState;
+  final AudioProcessingState processingState;
 
-  /// Flag that indicates if player is playing.
   final bool playing;
 
-  /// Duration of the current track.
   final Duration duration;
 
-  final List<int> coverImage;
+  final TracksStatus tracksStatus;
 
-  const PlayerState({
-    this.queue,
+  final List<int>? coverImage;
+
+  final double? speed;
+
+  const AudioPlayerState({
+    required this.loopMode,
+    required this.queue,
+    required this.tracksStatus,
     this.currentMediaItem,
-    this.currentIndex,
-    this.position,
-    this.playerStatus,
-    this.playbackState,
-    this.playing,
-    this.duration,
+    required this.currentIndex,
+    required this.position,
+    required this.playerStatus,
+    required this.processingState,
+    required this.playing,
+    required this.duration,
     this.coverImage,
+    this.speed,
   });
 
   @override
-  List<Object> get props => [
+  List<Object?> get props => [
+    loopMode,
+    tracksStatus,
     queue,
     currentIndex,
     currentMediaItem,
     position,
     playerStatus,
-    playbackState,
+    processingState,
     playing,
     duration,
     coverImage,
+    speed,
   ];
 
-  PlayerState copyWith({
-    List<MediaItem> queue,
-    MediaItem currentMediaItem,
-    int currentIndex,
-    Duration position,
-    PlayerStatus activePlayerStatus,
-    PlaybackState playbackState,
-    bool isPlayerActive,
-    bool playing,
-    Duration duration,
-    List<int> coverImage,
+  AudioPlayerState copyWith({
+    LoopMode? loopMode,
+    TracksStatus? tracksStatus,
+    List<MediaItem>? queue,
+    MediaItem? currentMediaItem,
+    int? currentIndex,
+    Duration? position,
+    PlayerStatus? playerStatus,
+    AudioProcessingState? processingState,
+    bool? playing,
+    Duration? duration,
+    List<int>? coverImage,
+    double? speed,
   }) {
-    return PlayerState(
+    return AudioPlayerState(
+      loopMode: loopMode ?? this.loopMode,
       queue: queue ?? this.queue,
       currentMediaItem: currentMediaItem ?? this.currentMediaItem,
       position: position ?? this.position,
-      playerStatus: activePlayerStatus ?? this.playerStatus,
-      playbackState: playbackState ?? this.playbackState,
+      playerStatus: playerStatus ?? this.playerStatus,
+      tracksStatus: tracksStatus ?? this.tracksStatus,
+      processingState: processingState ?? this.processingState,
       currentIndex: currentIndex ?? this.currentIndex,
       playing: playing ?? this.playing,
       duration: duration ?? this.duration,
       coverImage: coverImage ?? this.coverImage,
+      speed: speed ?? this.speed,
     );
   }
 }

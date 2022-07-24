@@ -35,7 +35,6 @@ class PlayerRepository {
         album: "RZRS",
       ),
     ];
-
     return audioList;
   }
 }
