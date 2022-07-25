@@ -1,13 +1,13 @@
 import 'dart:async';
-import 'dart:developer';
 import 'package:audio_service/audio_service.dart';
 import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:my_audio_player/audio_player_module/application/bloc/tracks_cubit.dart';
 import 'package:my_audio_player/audio_player_module/infrastructure/background_tasks/audio_player_background_task.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'player_cubit.freezed.dart';
 
 part 'player_state.dart';
 
@@ -59,8 +59,6 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
             playerStatus: PlayerStatus.initial,
             playing: false,
             duration: Duration.zero,
-            coverImage: null,
-            tracksStatus: TracksStatus.initial,
             speed: 1.0,
             processingState: AudioProcessingState.idle,
           ),

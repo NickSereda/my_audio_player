@@ -8,90 +8,19 @@ enum PlayerStatus {
   imageChanged,
 }
 
-class AudioPlayerState extends Equatable {
-
-  final LoopMode loopMode;
-
-  final List<MediaItem> queue;
-
-  final MediaItem? currentMediaItem;
-
-  final int currentIndex;
-
-  final Duration position;
-
-  final PlayerStatus playerStatus;
-
-  final AudioProcessingState processingState;
-
-  final bool playing;
-
-  final Duration duration;
-
-  final TracksStatus tracksStatus;
-
-  final List<int>? coverImage;
-
-  final double? speed;
-
-  const AudioPlayerState({
-    required this.loopMode,
-    required this.queue,
-    required this.tracksStatus,
-    this.currentMediaItem,
-    required this.currentIndex,
-    required this.position,
-    required this.playerStatus,
-    required this.processingState,
-    required this.playing,
-    required this.duration,
-    this.coverImage,
-    this.speed,
-  });
-
-  @override
-  List<Object?> get props => [
-    loopMode,
-    tracksStatus,
-    queue,
-    currentIndex,
-    currentMediaItem,
-    position,
-    playerStatus,
-    processingState,
-    playing,
-    duration,
-    coverImage,
-    speed,
-  ];
-
-  AudioPlayerState copyWith({
-    LoopMode? loopMode,
-    TracksStatus? tracksStatus,
-    List<MediaItem>? queue,
+@freezed
+class AudioPlayerState with _$AudioPlayerState {
+  const factory AudioPlayerState({
+    required LoopMode loopMode,
+    @Default(<MediaItem>[]) List<MediaItem> queue,
     MediaItem? currentMediaItem,
-    int? currentIndex,
-    Duration? position,
-    PlayerStatus? playerStatus,
-    AudioProcessingState? processingState,
-    bool? playing,
-    Duration? duration,
-    List<int>? coverImage,
+    required int currentIndex,
+    required Duration position,
+    required PlayerStatus playerStatus,
+    required AudioProcessingState processingState,
+    required bool playing,
+    required Duration duration,
     double? speed,
-  }) {
-    return AudioPlayerState(
-      loopMode: loopMode ?? this.loopMode,
-      queue: queue ?? this.queue,
-      currentMediaItem: currentMediaItem ?? this.currentMediaItem,
-      position: position ?? this.position,
-      playerStatus: playerStatus ?? this.playerStatus,
-      tracksStatus: tracksStatus ?? this.tracksStatus,
-      processingState: processingState ?? this.processingState,
-      currentIndex: currentIndex ?? this.currentIndex,
-      playing: playing ?? this.playing,
-      duration: duration ?? this.duration,
-      coverImage: coverImage ?? this.coverImage,
-      speed: speed ?? this.speed,
-    );
-  }
+  }) = _AudioPlayerState;
+
 }
