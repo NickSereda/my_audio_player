@@ -11,7 +11,6 @@ GetIt getIt = GetIt.instance;
 
 void main() {
   configureInjection(Environment.test);
-
   runApp(MyApp());
 }
 

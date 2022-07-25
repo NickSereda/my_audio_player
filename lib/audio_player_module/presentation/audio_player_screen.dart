@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:my_audio_player/audio_player_module/application/bloc/player_cubit.dart';
-import 'package:my_audio_player/audio_player_module/application/bloc/tracks_cubit.dart';
 import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/audio_timeline.dart';
 import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/loop_button.dart';
 import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/playback_speed_button.dart';
@@ -10,34 +9,10 @@ import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/s
 import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/title_artist_widget.dart';
 import 'package:my_audio_player/audio_player_module/presentation/widgets/playback_control_buttons.dart';
 
-class AudioPlayerScreen extends StatefulWidget {
+class AudioPlayerScreen extends StatelessWidget {
   AudioPlayerScreen({
     Key? key,
   }) : super(key: key);
-
-  @override
-  _AudioPlayerScreenState createState() => _AudioPlayerScreenState();
-}
-
-class _AudioPlayerScreenState extends State<AudioPlayerScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _playlistAnimationController;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _playlistAnimationController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 200),
-    );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    _playlistAnimationController.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

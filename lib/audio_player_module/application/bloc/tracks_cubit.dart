@@ -27,8 +27,7 @@ class TracksCubit extends Cubit<TracksState> {
     try {
       emit(state.copyWith(tracksStatus: TracksStatus.loading));
 
-      final List<MediaItem> audioTracks =
-          audioPlayerRepository.fetchAudioTracks();
+      final List<MediaItem> audioTracks = await audioPlayerRepository.fetchAudioTracks();
 
       if (audioTracks.isEmpty) {
         emit(state.copyWith(tracksStatus: TracksStatus.tracksEmpty));
