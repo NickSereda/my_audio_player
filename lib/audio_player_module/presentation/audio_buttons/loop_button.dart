@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:my_audio_player/models/bloc/player_cubit.dart';
+import 'package:my_audio_player/audio_player_module/application/bloc/player_cubit.dart';
 
 class LoopButton extends StatelessWidget {
   const LoopButton({Key? key}) : super(key: key);

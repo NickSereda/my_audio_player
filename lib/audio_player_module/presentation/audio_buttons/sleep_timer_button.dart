@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:my_audio_player/models/bloc/player_cubit.dart';
+import 'package:my_audio_player/audio_player_module/application/bloc/player_cubit.dart';
 
 class SleepTimerButton extends StatefulWidget {
   const SleepTimerButton({

@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:developer';
-
 import 'package:audio_service/audio_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:my_audio_player/models/bloc/player_cubit.dart';
-
-import '../audio_player_repository.dart';
+import 'package:injectable/injectable.dart';
+import 'package:my_audio_player/audio_player_module/application/bloc/player_cubit.dart';
+import 'package:my_audio_player/audio_player_module/infrastructure/repositories/audio_player_repository.dart';
 
 part 'tracks_state.dart';
 
+@injectable
 class TracksCubit extends Cubit<TracksState> {
+
   final PlayerRepository audioPlayerRepository;
 
   final PlayerCubit playerCubit;
@@ -33,7 +34,7 @@ class TracksCubit extends Cubit<TracksState> {
         emit(state.copyWith(tracksStatus: TracksStatus.tracksEmpty));
       } else {
         emit(state.copyWith(tracksStatus: TracksStatus.loaded, audioTracks: audioTracks));
-        playerCubit.setActivePlayer(tracks: audioTracks);
+        playerCubit.activatePlayer(tracks: audioTracks);
       }
     } catch (e) {
       debugPrint(e.toString());

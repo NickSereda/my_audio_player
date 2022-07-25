@@ -1,5 +1,7 @@
 import 'package:audio_service/audio_service.dart';
+import 'package:injectable/injectable.dart';
 
+@injectable
 class PlayerRepository {
   // Simple example from assets (Otherwise fetching tracks here from network)
   List<MediaItem> fetchAudioTracks() {

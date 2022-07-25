@@ -154,7 +154,7 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
         _player.sequenceStateStream.listen((SequenceState? sequenceState) {
           final sequence = sequenceState?.effectiveSequence;
           if (sequence == null || sequence.isEmpty) return;
-          final List<MediaItem> items = sequence.map((source) => source.tag).toList() as List<MediaItem>;
+          final List<MediaItem> items = sequence.map((source) => source.tag as MediaItem).toList() as List<MediaItem>;
           queue.add(items);
         });
   }

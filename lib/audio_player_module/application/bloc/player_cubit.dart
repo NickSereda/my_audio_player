@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:audio_service/audio_service.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:injectable/injectable.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:my_audio_player/models/background_tasks/audio_player_background_task.dart';
-import 'package:my_audio_player/models/bloc/tracks_cubit.dart';
+import 'package:my_audio_player/audio_player_module/application/bloc/tracks_cubit.dart';
+import 'package:my_audio_player/audio_player_module/infrastructure/background_tasks/audio_player_background_task.dart';
 import 'package:rxdart/rxdart.dart';
 
 part 'player_state.dart';
@@ -38,6 +40,7 @@ class ActiveAudioPlayerRxState {
   );
 }
 
+@lazySingleton
 class PlayerCubit extends Cubit<AudioPlayerState> {
   StreamSubscription? _mediaItemStreamSubscription;
 
@@ -45,7 +48,8 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
 
   StreamSubscription? _positionStreamSubscription;
 
-  PlayerCubit() : super(
+  PlayerCubit()
+      : super(
           AudioPlayerState(
             loopMode: LoopMode.off,
             position: Duration.zero,
@@ -84,10 +88,8 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
     return super.close();
   }
 
-  /// Sets Active Player.
-  ///
-  /// Loads tracks and starts [AudioService] background task, gets [AudioService] streams.
-  Future<void> setActivePlayer({
+
+  Future<void> activatePlayer({
     required List<MediaItem> tracks,
   }) async {
     // Creating audioHandler
@@ -97,16 +99,15 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
       // Todo:- Handle error here
     }) as BackgroundAudioTaskHandler;
 
-    getPlayerStreamSubscription();
+    _getPlayerStreamSubscription();
 
-    // gets playing stream
-    getPlayingStreamSubscription();
+    _getPlayingStreamSubscription();
 
-    _getDurationStreamSubscription();
+    _getDurationAndPositionStreamSubscription();
   }
 
   /// This method connects [AudioService] streams into 1 custom stream and emits [ActivePlayerState].
-  void getPlayerStreamSubscription() {
+  void _getPlayerStreamSubscription() {
     if (_audioHandler != null) {
       _playerStreamSubscription = Rx.combineLatest3<MediaItem?, List<MediaItem>,
               PlaybackState, ActiveAudioPlayerRxState>(
@@ -130,7 +131,6 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
               state.copyWith(
                 currentMediaItem: currentMediaItem,
                 currentIndex: currentIndex,
-                position: rxState.playbackState.position,
                 queue: rxState.queue,
                 processingState: rxState.playbackState.processingState,
               ),
@@ -141,8 +141,7 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
     }
   }
 
-
-  void getPlayingStreamSubscription() {
+  void _getPlayingStreamSubscription() {
     _playingStreamSubscription = _audioHandler?.playbackState
         .map((state) => state.playing)
         .distinct()
@@ -230,7 +229,7 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
   Future<void> activateOrPlay() async {
     if (state.processingState == AudioProcessingState.idle) {
       // is triggered when we stop on background and play again
-      setActivePlayer(
+      activatePlayer(
         tracks: state.queue,
       );
     } else {
@@ -238,19 +237,25 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
     }
   }
 
-  void changeDuration(Duration duration) {
+  void _changeDuration(Duration duration) {
     emit(state.copyWith(duration: duration));
   }
 
 // Getting duration and position stream subscriptions.
-  Future<void> _getDurationStreamSubscription() async {
+  Future<void> _getDurationAndPositionStreamSubscription() async {
     _durationStreamSubscription = _audioHandler?.durationStream.listen(
       (duration) {
         if (duration == null) {
-          changeDuration(Duration.zero);
+          _changeDuration(Duration.zero);
         } else {
-          changeDuration(duration);
+          _changeDuration(duration);
         }
+      },
+    );
+
+    _positionStreamSubscription = _audioHandler?.positionStream.listen(
+      (position) {
+        emit(state.copyWith(position: position));
       },
     );
   }

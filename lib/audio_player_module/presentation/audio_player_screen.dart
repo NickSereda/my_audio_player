@@ -1,16 +1,14 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:my_audio_player/audio_buttons/audio_timeline.dart';
-import 'package:my_audio_player/audio_buttons/loop_button.dart';
-import 'package:my_audio_player/audio_buttons/playback_speed_button.dart';
-import 'package:my_audio_player/audio_buttons/sleep_timer_button.dart';
-import 'package:my_audio_player/audio_buttons/title_artist_widget.dart';
-import 'package:my_audio_player/models/bloc/tracks_cubit.dart';
-import 'package:my_audio_player/widgets/playback_control_buttons.dart';
 
-import 'models/bloc/player_cubit.dart';
+import 'package:my_audio_player/audio_player_module/application/bloc/player_cubit.dart';
+import 'package:my_audio_player/audio_player_module/application/bloc/tracks_cubit.dart';
+import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/audio_timeline.dart';
+import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/loop_button.dart';
+import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/playback_speed_button.dart';
+import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/sleep_timer_button.dart';
+import 'package:my_audio_player/audio_player_module/presentation/audio_buttons/title_artist_widget.dart';
+import 'package:my_audio_player/audio_player_module/presentation/widgets/playback_control_buttons.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   AudioPlayerScreen({
