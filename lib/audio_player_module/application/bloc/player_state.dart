@@ -22,5 +22,4 @@ class AudioPlayerState with _$AudioPlayerState {
     required Duration duration,
     double? speed,
   }) = _AudioPlayerState;
-
 }

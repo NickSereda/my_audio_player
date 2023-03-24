@@ -5,39 +5,55 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
-import 'package:my_audio_player/audio_player_module/application/bloc/player_cubit.dart';
-import 'package:my_audio_player/audio_player_module/infrastructure/repositories/audio_player_repository.dart';
+import 'package:my_audio_player/audio_player_module/infrastructure/services/tracks_service.dart';
 
 part 'tracks_state.dart';
 
 @injectable
 class TracksCubit extends Cubit<TracksState> {
+  final TracksService _tracksService;
 
-  final PlayerRepository audioPlayerRepository;
+  TracksCubit(
+    this._tracksService,
+  ) : super(
+          TracksState(tracksStatus: TracksStatus.initial),
+        ) {
+    _tracksStreamSubscription = _tracksService.tracksStream.listen((tracks) {
+      if (tracks != null) {
+        if (tracks.isEmpty) {
+          emit(
+            state.copyWith(tracksStatus: TracksStatus.tracksEmpty),
+          );
+        } else {
+          emit(
+            state.copyWith(tracksStatus: TracksStatus.loaded),
+          );
+        }
+      }
+    });
+  }
 
-  final PlayerCubit playerCubit;
-  TracksCubit(this.audioPlayerRepository, this.playerCubit)
-      : super(TracksState(
-          tracksStatus: TracksStatus.initial,
-          audioTracks: [],
-        ));
+  late final StreamSubscription<List<MediaItem>?> _tracksStreamSubscription;
 
   Future<void> getAudioTracks() async {
-
     try {
-      emit(state.copyWith(tracksStatus: TracksStatus.loading));
-
-      final List<MediaItem> audioTracks = await audioPlayerRepository.fetchAudioTracks();
-
-      if (audioTracks.isEmpty) {
-        emit(state.copyWith(tracksStatus: TracksStatus.tracksEmpty));
-      } else {
-        emit(state.copyWith(tracksStatus: TracksStatus.loaded, audioTracks: audioTracks));
-        playerCubit.activatePlayer(tracks: audioTracks);
-      }
+      emit(
+        state.copyWith(tracksStatus: TracksStatus.loading),
+      );
+      await _tracksService.getTracks();
+      log(_tracksService.tracksStream.first.toString());
     } catch (e) {
       debugPrint(e.toString());
-      emit(state.copyWith(tracksStatus: TracksStatus.error));
+      emit(
+        state.copyWith(tracksStatus: TracksStatus.error),
+      );
     }
   }
+
+  @override
+  Future<void> close() {
+    _tracksStreamSubscription.cancel();
+    return super.close();
+  }
+
 }

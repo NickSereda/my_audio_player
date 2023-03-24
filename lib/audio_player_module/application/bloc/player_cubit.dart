@@ -4,6 +4,7 @@ import 'package:bloc/bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:my_audio_player/audio_player_module/infrastructure/background_tasks/audio_player_background_task.dart';
+import 'package:my_audio_player/audio_player_module/infrastructure/services/tracks_service.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -40,15 +41,9 @@ class ActiveAudioPlayerRxState {
   );
 }
 
-@lazySingleton
+@injectable
 class PlayerCubit extends Cubit<AudioPlayerState> {
-  StreamSubscription? _mediaItemStreamSubscription;
-
-  StreamSubscription? _durationStreamSubscription;
-
-  StreamSubscription? _positionStreamSubscription;
-
-  PlayerCubit()
+  PlayerCubit(this._tracksService)
       : super(
           AudioPlayerState(
             loopMode: LoopMode.off,
@@ -62,7 +57,21 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
             speed: 1.0,
             processingState: AudioProcessingState.idle,
           ),
-        );
+        ) {
+    _tracksStreamSubscription = _tracksService.tracksStream.listen((tracks) {
+      if (tracks != null && tracks.isNotEmpty) {
+        setUpAudioTracks(tracks: tracks);
+      }
+    });
+  }
+
+  final TracksService _tracksService;
+
+  late final StreamSubscription<List<MediaItem>?> _tracksStreamSubscription;
+
+  StreamSubscription<Duration?>? _durationStreamSubscription;
+
+  StreamSubscription<Duration>? _positionStreamSubscription;
 
   /// StreamSubscription that creates 1 custom stream and emits [ActivePlayerState].
   StreamSubscription? _playerStreamSubscription;
@@ -75,19 +84,9 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
 
   BackgroundAudioTaskHandler? _audioHandler;
 
-  @override
-  Future<void> close() {
-    _playerStreamSubscription?.cancel();
-    _playingStreamSubscription?.cancel();
-    _durationStreamSubscription?.cancel();
-    _positionStreamSubscription?.cancel();
-    _mediaItemStreamSubscription?.cancel();
-    _errorStreamSubscription?.cancel();
-    return super.close();
-  }
 
 
-  Future<void> activatePlayer({
+  Future<void> setUpAudioTracks({
     required List<MediaItem> tracks,
   }) async {
     // Creating audioHandler
@@ -227,7 +226,7 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
   Future<void> activateOrPlay() async {
     if (state.processingState == AudioProcessingState.idle) {
       // is triggered when we stop on background and play again
-      activatePlayer(
+      setUpAudioTracks(
         tracks: state.queue,
       );
     } else {
@@ -257,4 +256,16 @@ class PlayerCubit extends Cubit<AudioPlayerState> {
       },
     );
   }
+
+  @override
+  Future<void> close() {
+    _playerStreamSubscription?.cancel();
+    _playingStreamSubscription?.cancel();
+    _durationStreamSubscription?.cancel();
+    _positionStreamSubscription?.cancel();
+    _errorStreamSubscription?.cancel();
+    _tracksStreamSubscription.cancel();
+    return super.close();
+  }
+
 }

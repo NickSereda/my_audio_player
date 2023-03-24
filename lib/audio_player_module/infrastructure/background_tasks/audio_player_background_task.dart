@@ -42,7 +42,7 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
     _notifyAudioHandlerAboutPlaybackEvents();
     await _listenForCurrentSongIndexChanges();
     _listenForSequenceStateChanges();
-    WidgetsBinding.instance!.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   ConcatenatingAudioSource _playlist = ConcatenatingAudioSource(children: []);
@@ -55,20 +55,20 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
         for (int i = 0; i < queue.value.length; i++) {
           final name = queue.value[i].id;
           if (name.startsWith('asset')) {
-            AudioSource audio = AudioSource.uri(Uri.parse(name),
-                tag: queue.value[i]);
+            AudioSource audio =
+                AudioSource.uri(Uri.parse(name), tag: queue.value[i]);
             list.add(audio);
           } else {
-            AudioSource audio = LockCachingAudioSource(Uri.parse(name),
-                tag: queue.value[i]);
+            AudioSource audio =
+                LockCachingAudioSource(Uri.parse(name), tag: queue.value[i]);
             list.add(audio);
           }
         }
       } else {
         for (int i = 0; i < queue.value.length; i++) {
           final name = queue.value[i].id;
-          AudioSource audio = AudioSource.uri(Uri.parse(name),
-              tag: queue.value[i]);
+          AudioSource audio =
+              AudioSource.uri(Uri.parse(name), tag: queue.value[i]);
           list.add(audio);
         }
       }
@@ -93,70 +93,70 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
         }
         return;
       });
-    } catch (e) {
-
-    }
+    } catch (e) {}
   }
 
   void _notifyAudioHandlerAboutPlaybackEvents() {
     _playbackEventStreamSubscription =
         _player.playbackEventStream.listen((PlaybackEvent event) {
-          final playing = _player.playing;
-          playbackState.add(playbackState.value.copyWith(
-            controls: [
-              MediaControl.skipToPrevious,
-              if (playing) MediaControl.pause else MediaControl.play,
-              MediaControl.stop,
-              MediaControl.skipToNext,
-            ],
-            systemActions: const {
-              MediaAction.seek,
-            },
-            androidCompactActionIndices: const [0, 1, 3],
-            processingState: const {
-              ProcessingState.idle: AudioProcessingState.idle,
-              ProcessingState.loading: AudioProcessingState.loading,
-              ProcessingState.buffering: AudioProcessingState.buffering,
-              ProcessingState.ready: AudioProcessingState.ready,
-              ProcessingState.completed: AudioProcessingState.completed,
-            }[_player.processingState]!,
-            repeatMode: const {
-              LoopMode.off: AudioServiceRepeatMode.none,
-              LoopMode.one: AudioServiceRepeatMode.one,
-              LoopMode.all: AudioServiceRepeatMode.all,
-            }[_player.loopMode]!,
-            shuffleMode: (_player.shuffleModeEnabled)
-                ? AudioServiceShuffleMode.all
-                : AudioServiceShuffleMode.none,
-            playing: playing,
-            updatePosition: _player.position,
-            bufferedPosition: _player.bufferedPosition,
-            speed: _player.speed,
-            queueIndex: event.currentIndex!,
-          ));
-        });
+      final playing = _player.playing;
+      playbackState.add(playbackState.value.copyWith(
+        controls: [
+          MediaControl.skipToPrevious,
+          if (playing) MediaControl.pause else MediaControl.play,
+          MediaControl.stop,
+          MediaControl.skipToNext,
+        ],
+        systemActions: const {
+          MediaAction.seek,
+        },
+        androidCompactActionIndices: const [0, 1, 3],
+        processingState: const {
+          ProcessingState.idle: AudioProcessingState.idle,
+          ProcessingState.loading: AudioProcessingState.loading,
+          ProcessingState.buffering: AudioProcessingState.buffering,
+          ProcessingState.ready: AudioProcessingState.ready,
+          ProcessingState.completed: AudioProcessingState.completed,
+        }[_player.processingState]!,
+        repeatMode: const {
+          LoopMode.off: AudioServiceRepeatMode.none,
+          LoopMode.one: AudioServiceRepeatMode.one,
+          LoopMode.all: AudioServiceRepeatMode.all,
+        }[_player.loopMode]!,
+        shuffleMode: (_player.shuffleModeEnabled)
+            ? AudioServiceShuffleMode.all
+            : AudioServiceShuffleMode.none,
+        playing: playing,
+        updatePosition: _player.position,
+        bufferedPosition: _player.bufferedPosition,
+        speed: _player.speed,
+        queueIndex: event.currentIndex!,
+      ));
+    });
   }
 
   Future<void> _listenForCurrentSongIndexChanges() async {
     _currentIndexStreamSubscription =
         _player.currentIndexStream.listen((index) async {
-          final playlist = queue;
-          if (index == null || await playlist.isEmpty) return;
-          if (_player.shuffleModeEnabled) {
-            index = _player.shuffleIndices![index];
-          }
-          mediaItem.add(playlist.value[index]);
-        });
+      final playlist = queue;
+      if (index == null || await playlist.isEmpty) return;
+      if (_player.shuffleModeEnabled) {
+        index = _player.shuffleIndices![index];
+      }
+      mediaItem.add(playlist.value[index]);
+    });
   }
 
   void _listenForSequenceStateChanges() {
     _sequenceStateStreamSubscription =
         _player.sequenceStateStream.listen((SequenceState? sequenceState) {
-          final sequence = sequenceState?.effectiveSequence;
-          if (sequence == null || sequence.isEmpty) return;
-          final List<MediaItem> items = sequence.map((source) => source.tag as MediaItem).toList() as List<MediaItem>;
-          queue.add(items);
-        });
+      final sequence = sequenceState?.effectiveSequence;
+      if (sequence == null || sequence.isEmpty) return;
+      final List<MediaItem> items = sequence
+          .map((source) => source.tag as MediaItem)
+          .toList() as List<MediaItem>;
+      queue.add(items);
+    });
   }
 
   @override
@@ -246,8 +246,7 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
     var newPosition = _player.position + offset;
     // Make sure we don't jump out of bounds.
     if (newPosition < Duration.zero) newPosition = Duration.zero;
-    if (newPosition > _player.duration!)
-      newPosition = _player.duration!;
+    if (newPosition > _player.duration!) newPosition = _player.duration!;
     // Perform the jump via a seek.
     await _player.seek(newPosition);
   }
@@ -287,7 +286,7 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
       _errorStreamSubscription?.cancel();
       _playbackEventStreamSubscription?.cancel();
 
-      WidgetsBinding.instance!.removeObserver(this);
+      WidgetsBinding.instance.removeObserver(this);
 
       super.stop();
     }
@@ -303,13 +302,12 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
       }
       final oldMediaItem = newQueue[index]!;
       final MediaItem? newMediaItem =
-      oldMediaItem.copyWith(artUri: Uri.parse(extras!["path"] as String));
+          oldMediaItem.copyWith(artUri: Uri.parse(extras!["path"] as String));
 
       newQueue[index] = newMediaItem;
       queue.add(newQueue as List<MediaItem>);
       mediaItem.add(newMediaItem);
     }
-
   }
 
   @override
@@ -317,5 +315,4 @@ class BackgroundAudioTaskHandler extends BaseAudioHandler
     await _player.stop();
     return super.stop();
   }
-
 }
